@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 10%;
+    --foreground: 210 20% 92%;
+
+    --card: 220 18% 14%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 220 18% 14%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 210 70% 55%;
+    --primary-foreground: 210 20% 98%;
+
+    --secondary: 220 16% 22%;
+    --secondary-foreground: 210 20% 85%;
+
+    --muted: 220 14% 18%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 220 16% 22%;
+    --accent-foreground: 210 20% 92%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 14% 20%;
+    --input: 220 14% 20%;
+    --ring: 210 70% 55%;
+
+    --radius: 0.5rem;
+
+    /* Triage ESI Colors */
+    --esi-1: 0 80% 55%;
+    --esi-2: 25 95% 55%;
+    --esi-3: 45 95% 50%;
+    --esi-4: 142 60% 45%;
+    --esi-5: 210 70% 55%;
+
+    /* Status colors */
+    --status-waiting: 45 95% 50%;
+    --status-treating: 142 60% 45%;
+    --status-critical: 0 80% 55%;
+
+    --sidebar-background: 220 20% 8%;
+    --sidebar-foreground: 210 20% 85%;
+    --sidebar-primary: 210 70% 55%;
+    --sidebar-primary-foreground: 210 20% 98%;
+    --sidebar-accent: 220 16% 16%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 220 14% 18%;
+    --sidebar-ring: 210 70% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+  }
+}
+
+@layer utilities {
+  .esi-1 { background-color: hsl(var(--esi-1)); }
+  .esi-2 { background-color: hsl(var(--esi-2)); }
+  .esi-3 { background-color: hsl(var(--esi-3)); }
+  .esi-4 { background-color: hsl(var(--esi-4)); }
+  .esi-5 { background-color: hsl(var(--esi-5)); }
+
+  .esi-1-text { color: hsl(var(--esi-1)); }
+  .esi-2-text { color: hsl(var(--esi-2)); }
+  .esi-3-text { color: hsl(var(--esi-3)); }
+  .esi-4-text { color: hsl(var(--esi-4)); }
+  .esi-5-text { color: hsl(var(--esi-5)); }
+
+  .esi-1-border { border-color: hsl(var(--esi-1)); }
+  .esi-2-border { border-color: hsl(var(--esi-2)); }
+  .esi-3-border { border-color: hsl(var(--esi-3)); }
+  .esi-4-border { border-color: hsl(var(--esi-4)); }
+  .esi-5-border { border-color: hsl(var(--esi-5)); }
+}
