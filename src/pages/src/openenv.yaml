@@ -1,0 +1,199 @@
+# ─── OpenEnv Specification ─────────────────────────────────────────────────────
+# Identity card for the ED Triage Reinforcement Learning Environment
+
+name: ed-triage-env
+version: "1.0.0"
+description: >
+  Emergency Department Triage simulation where an AI agent prioritizes,
+  treats, and discharges patients to minimize mortality and maximize throughput.
+
+# ─── Entities ──────────────────────────────────────────────────────────────────
+
+entities:
+  patient:
+    id: string           # e.g. "P-001"
+    name: string
+    age: integer         # 10–80
+    gender: enum [M, F, O]
+    chiefComplaint: string
+    esiLevel: integer    # 1 (most critical) – 5 (least critical)
+    status: enum [waiting, treating, discharged]
+    arrivalTime: datetime
+    painScale: integer   # 1–10
+    vitals:
+      hr: integer        # heart rate (bpm)
+      bp: string         # systolic/diastolic e.g. "120/80"
+      temp: float        # °C
+      spo2: integer      # oxygen saturation %
+      rr: integer        # respiratory rate
+
+  beds:
+    total: integer
+    occupied: integer
+
+# ─── Action Space ──────────────────────────────────────────────────────────────
+
+actions:
+  triage:
+    description: Assign an ESI level to an untriaged patient
+    params:
+      patientId: string
+      assignedESI: integer  # 1–5
+    preconditions:
+      - Patient must exist
+    effects:
+      - Sets patient.esiLevel
+
+  treat:
+    description: Move a waiting patient into a bed for treatment
+    params:
+      patientId: string
+    preconditions:
+      - Patient status must be "waiting"
+      - At least one bed available
+    effects:
+      - Patient status → "treating"
+      - beds.occupied += 1
+
+  discharge:
+    description: Release a treated patient, freeing their bed
+    params:
+      patientId: string
+    preconditions:
+      - Patient status must be "treating"
+    effects:
+      - Patient status → "discharged"
+      - beds.occupied -= 1
+
+  noop:
+    description: Do nothing this tick
+    params: {}
+
+# ─── State Schema ──────────────────────────────────────────────────────────────
+
+state:
+  tick: integer              # current simulation step
+  patients: list[patient]    # all patients in the system
+  beds:
+    total: integer
+    occupied: integer
+  metrics:
+    totalArrivals: integer
+    totalDischarged: integer
+    totalMistriage: integer
+    avgWaitMinutes: float
+    mortalityEvents: integer
+  done: boolean              # true when episode ends
+
+# ─── Reward Function ──────────────────────────────────────────────────────────
+
+reward:
+  description: >
+    Per-step scalar signal guiding the agent toward optimal triage behavior.
+
+  components:
+    correct_triage:
+      value: +10
+      condition: Assigned ESI matches true ESI
+
+    under_triage:
+      value: -8 × severity_difference
+      condition: >
+        Assigned ESI > true ESI (patient marked less critical than reality).
+        Most dangerous error — penalized heavily.
+
+    over_triage:
+      value: -3 × severity_difference
+      condition: Assigned ESI < true ESI (cautious but wasteful)
+
+    treat_patient:
+      value: +(6 - esiLevel) × 2
+      condition: Patient moves from waiting → treating. Higher acuity = more reward.
+
+    discharge:
+      value: +3
+      condition: Patient discharged successfully
+
+    mortality_event:
+      value: -50
+      condition: >
+        High-acuity patient (ESI 1–2) dies while waiting too long.
+        ESI 1: 8% chance per tick after 15 min wait.
+        ESI 2: 2% chance per tick after 15 min wait.
+
+    invalid_action:
+      value: -1 to -2
+      condition: Action targets nonexistent patient, wrong status, or no beds
+
+    time_penalty:
+      value: -0.5
+      condition: Applied every tick to encourage efficiency
+
+  grading:
+    scale: 0.0 – 1.0
+    weights:
+      reward_ratio: 0.35      # cumulative reward / max possible
+      triage_accuracy: 0.25   # correct assignments / total triaged
+      throughput: 0.15        # discharged / arrivals
+      mortality: 0.15         # penalty per death event
+      prioritization: 0.10   # treated high-acuity before low-acuity
+    penalty:
+      critical_delay: -0.05 per ESI 1–2 patient still waiting at end
+
+# ─── API Endpoints ─────────────────────────────────────────────────────────────
+
+api:
+  /reset:
+    method: POST
+    description: Start a new simulation episode
+    returns: state
+
+  /state:
+    method: GET
+    description: Return current environment state snapshot
+    returns: state
+
+  /step:
+    method: POST
+    description: Submit an action and advance one tick
+    body: action
+    returns: { state, reward, done, info }
+
+  /tasks:
+    method: GET
+    description: List available scenario tasks (easy, medium, hard)
+    returns: list[task]
+
+  /grader:
+    method: GET
+    description: Return normalized 0–1 performance report
+    returns: GradeReport
+
+  /baseline:
+    method: POST
+    description: Run the built-in baseline agent to completion
+    returns: { finalState, grade }
+
+# ─── Scenarios ─────────────────────────────────────────────────────────────────
+
+scenarios:
+  easy:
+    patients: 2
+    beds: 5
+    ticks: 20
+    arrival_rate: 0.3
+    pass_threshold: 0.50
+
+  medium:
+    patients: 5
+    beds: 8
+    ticks: 50
+    arrival_rate: 1.0
+    pass_threshold: 0.35
+
+  hard:
+    patients: 10
+    beds: 4
+    ticks: 100
+    arrival_rate: 2.5
+    pass_threshold: 0.20
